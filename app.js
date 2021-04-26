@@ -6,6 +6,7 @@ const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 
 
@@ -37,6 +38,7 @@ const userSchema = new mongoose.Schema({
     email: String,
     password: String,
     googleId: String,
+    facebookId: String,
     secret: String
 });
 
@@ -58,6 +60,8 @@ passport.deserializeUser(function (id, done) {
     });
 });
 
+// GOOGLE PASSPORT USE
+
 passport.use(new GoogleStrategy({
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -65,7 +69,24 @@ passport.use(new GoogleStrategy({
     },
     function (accessToken, refreshToken, profile, cb) {
         User.findOrCreate({
-            googleId: profile.id
+            username: profile.emails[0].value,
+            googleId: profile.id,
+        }, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
+
+//FACEBOOK PASSPORT USE
+
+passport.use(new FacebookStrategy({
+        clientID: process.env.FACEBOOK_APP_ID,
+        clientSecret: process.env.FACEBOOK_APP_SECRET,
+        callbackURL: "http://localhost:3000/auth/facebook/secrets"
+    },
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate({
+            facebookId: profile.id
         }, function (err, user) {
             return cb(err, user);
         });
@@ -76,9 +97,11 @@ app.get('/', function (req, res) {
     res.render('home');
 });
 
+//GOOGLE GET REQUEST
+
 app.get('/auth/google',
     passport.authenticate('google', {
-        scope: ['profile']
+        scope: ['profile',"email"]
     }));
 
 app.get('/auth/google/secrets',
@@ -86,9 +109,25 @@ app.get('/auth/google/secrets',
         failureRedirect: '/login'
     }),
     function (req, res) {
-        // Successful authentication.
+        // Successful authentication wia Google go to the Secret page.
         res.redirect('/secrets');
     });
+
+// FACEBOOK GET REQUEST
+
+app.get('/auth/facebook',
+    passport.authenticate('facebook'));
+
+app.get('/auth/facebook/secrets',
+    passport.authenticate('facebook', {
+        failureRedirect: '/login'
+    }),
+    function (req, res) {
+        // Successful authentication wia Facebook go to the Secret page.
+        res.redirect('/secrets');
+    });
+
+// BODY REQUEST 
 
 app.route('/login')
 
@@ -143,8 +182,6 @@ app.route('/submit')
 
     .post(function (req, res) {
         const submittedSecret = req.body.secret;
-
-        console.log(req.user.id);
 
         User.findById(req.user.id, function (err, foundUser) {
             if (err) {
