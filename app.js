@@ -38,7 +38,10 @@ const userSchema = new mongoose.Schema({
     email: String,
     password: String,
     googleId: String,
+    googleEmail: String,
+    googleName: String,
     facebookId: String,
+    facebookName: String,
     secret: String
 });
 
@@ -69,8 +72,9 @@ passport.use(new GoogleStrategy({
     },
     function (accessToken, refreshToken, profile, cb) {
         User.findOrCreate({
-            username: profile.emails[0].value,
+            googleEmail: profile.emails[0].value,
             googleId: profile.id,
+            googleName: profile.displayName
         }, function (err, user) {
             return cb(err, user);
         });
@@ -86,7 +90,8 @@ passport.use(new FacebookStrategy({
     },
     function (accessToken, refreshToken, profile, cb) {
         User.findOrCreate({
-            facebookId: profile.id
+            facebookId: profile.id,
+            facebookName: profile.displayName
         }, function (err, user) {
             return cb(err, user);
         });
