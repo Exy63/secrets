@@ -106,7 +106,7 @@ app.get('/', function (req, res) {
 
 app.get('/auth/google',
     passport.authenticate('google', {
-        scope: ['profile',"email"]
+        scope: ['profile', "email"]
     }));
 
 app.get('/auth/google/secrets',
@@ -236,8 +236,11 @@ app.route('/register')
 
 
 
+let port = process.env.PORT;
+if (port == null || port == "") {
+    port = 3000;
+}
 
-
-app.listen(3000, function () {
-    console.log('Server started on port 3000.');
+app.listen(port, function () {
+    console.log('Server has started.');
 })
